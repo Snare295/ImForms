@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { getAllState, getState, addNewState, updateState, deleteAllState, deleteState } = require("./controllers/controllerState");
+const { getAllState, getState, addNewState, updateState, deleteState } = require("./controllers/controllerState");
+const { getAllResults, getResults, addNewResults, updateResults, deleteResults } = require("./controllers/cotrollerResults");
 
 router
   .get("/state", getAllState)
@@ -8,6 +9,11 @@ router
   .post("/state", addNewState)
   .put("/state/:id", updateState)
   .delete("/state/:id", deleteState)
-  .delete("/state", deleteAllState);
+
+  .get("/results", getAllResults)
+  .get("/results/:id", getResults)
+  .post("/results", addNewResults)
+  .put("/results/:id", updateResults)
+  .delete("/results/:id", deleteResults);
 
 module.exports = router;

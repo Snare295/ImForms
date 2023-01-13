@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getAllState, getState, addNewState, updateState, deleteState } = require("./controllers/controllerState");
-const { getAllResults, getResults, addNewResults, updateResults, deleteResults } = require("./controllers/cotrollerResults");
+const { getAllResults, getResults, addNewResults, updateResults, deleteResults } = require("./controllers/controllerResults");
 
 router
   .get("/state", getAllState)

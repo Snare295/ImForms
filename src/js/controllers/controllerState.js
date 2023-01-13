@@ -12,7 +12,7 @@ const getState = (req, res) => {
     const query = `SELECT * FROM state WHERE id=${req.params.id}`;
     db.query(query, (err, result) => {
         if (err) return res.status(500).json(err);
-        if (result.length === 0) return res.status(404).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
         res.status(200).json(result[0]);
     });
 };
@@ -48,10 +48,9 @@ const updateState = (req, res) => {
     const queryIdExist = `SELECT * FROM state WHERE id=${req.params.id}`;
     db.query(queryIdExist, (err, result) => {
         if (err) return res.status(500).json(err);
-        console.log(result.length);
-        if (result.length === 0) return res.status(404).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
 
-        //update state
+        //update name in state
         const query = `UPDATE state SET name = '${name}' WHERE id=${req.params.id}`;
         db.query(query, (err, result) => {
             if (err) return res.status(500).json(err);
@@ -65,8 +64,7 @@ const deleteState = (req, res) => {
     const queryIdExist = `SELECT * FROM state WHERE id=${req.params.id}`;
     db.query(queryIdExist, (err, result) => {
         if (err) return res.status(500).json(err);
-        console.log(result.length);
-        if (result.length === 0) return res.status(404).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
 
         //delete state
         const query = `DELETE FROM state WHERE id=${req.params.id}`;

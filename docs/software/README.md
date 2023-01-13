@@ -209,22 +209,12 @@ SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
--- -----------------------------------------------------
--- Data for table `mydb`.`role`
--- -----------------------------------------------------
-START TRANSACTION;
-USE `mydb`;
-INSERT INTO `mydb`.`role` (`id`, `name`) VALUES (1, 'Respondent');
-INSERT INTO `mydb`.`role` (`id`, `name`) VALUES (2, 'Interviewer');
-
-COMMIT;
-
 ```
 
 
 # RESTfull сервіс для управління даними
 
-## Файл підключення до бази даних
+## Файл підключення до бази даних connection.js
 
 ```js
 const mysql = require('mysql');
@@ -232,16 +222,16 @@ const mysql = require('mysql');
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'Rfyfky11*',
+    password: 'vlad1234',
     database: 'mydb'
 });
 
 module.exports = db;
 ```
-## Кореневий файл серверу
+## Кореневий файл серверу index.js
 
 ```js
-const db = require('./config/db_connection');
+const db = require('./connection');
 const express = require('express');
 const app = express();
 
@@ -249,123 +239,225 @@ const PORT = 3500;
 
 app.use(express.json());
 
-app.use('/api', require('./routes/apiRoute'));
+app.use('/api', require('./routes'));
 
 db.connect(() => app.listen(PORT, () => console.log(`Server is running on port ${PORT}`)));
 ```
 
-##  Файл з роутером
+##  Файл з роутером routes.js
 
  ```js
- const express = require("express");
+const express = require("express");
 const router = express.Router();
-const { getAllUsers, AddNewUser, getUser, updateUser, deleteUser } = require("../controllers/apiController");
+const { getAllState, getState, addNewState, updateState, deleteState } = require("./controllers/controllerState");
+const { getAllResults, getResults, addNewResults, updateResults, deleteResults } = require("./controllers/controllerResults");
 
 router
-  .get("/users", getAllUsers)
-  .get("/user/:id", getUser)
-  .post("/user", AddNewUser)
-  .put("/user/:id", updateUser)
-  .delete("/user/:id", deleteUser);
+  .get("/state", getAllState)
+  .get("/state/:id", getState)
+  .post("/state", addNewState)
+  .put("/state/:id", updateState)
+  .delete("/state/:id", deleteState)
+
+  .get("/results", getAllResults)
+  .get("/results/:id", getResults)
+  .post("/results", addNewResults)
+  .put("/results/:id", updateResults)
+  .delete("/results/:id", deleteResults);
 
 module.exports = router;
-
  ```
 
-##  Файл контролерів для обробки запитів
+##  Файл контролерів для обробки запитів таблиці state - controllerState.js
 
 ```js
-const db = require("../config/db_connection");
+const db = require("../connection");
 
-const getAllUsers = (req, res) => {
-  const query = "SELECT * FROM users";
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.status(200).json(result);
-  });
-};
-
-const getUser = (req, res) => {
-  const query = `SELECT * FROM users WHERE id=${req.params.id}`;
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json(err);
-    if (result.length === 0) return res.sendStatus(404);
-    res.status(200).json(result[0]);
-  });
-};
-
-const AddNewUser = (req, res) => {
-  const { username, email, password, role_id } = req.body;
-  if (!(username && email && password))
-    return res
-      .status(400)
-      .json({ message: "Username, email and password required" });
-     const queryToFindUser = `SELECT * FROM users WHERE email="${email}"`;
-      db.query(queryToFindUser, (err, result) =>{
+const getAllState = (req, res) => {
+    const query = "SELECT * FROM state";
+    db.query(query,(err,result) => {
         if (err) return res.status(500).json(err);
-        if (result.length !== 0) return res.status(406).json('There is already user with this email');
-  const query = "INSERT INTO users SET ?";
-  const user = {
-    username,
-    email,
-    password,
-    role_id: role_id || 1,
-  };
-  db.query(query, user, (err) => {
-    if (err) return res.status(500).json(err);
-    res.status(201).json({ message: "New user created" });
-  });
-});
+        res.status(200).json(result);
+    });
 };
 
-const updateUser = (req, res) => {
-  const { username, email, password } = req.body;
-  if (!(username || email || password)){
-    res
-    .status(400)
-    .json({ message: "Username, email or password  required " });
-    return
-  }
-  db.query(`SELECT * FROM users WHERE id=${req.params.id}`, (err, result) =>{
-    if (err) return res.status(500).json(err);
-    if (result.length === 0) return res.status(404).json('No user with this id');
-  let query = "";
-  if (username) {
-    query = `UPDATE users SET username = '${req.body.username}' WHERE id = '${req.params.id}'`;
-    db.query(query, (err) => {
-      if (err) return res.status(500).json(err);
+const getState = (req, res) => {
+    const query = `SELECT * FROM state WHERE id=${req.params.id}`;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
+        res.status(200).json(result[0]);
     });
-  }
-  if (email) {
-    query = `UPDATE users SET email = '${req.body.email}' WHERE id = '${req.params.id}'`;
-    db.query(query, (err) => {
-      if (err) return res.status(500).json(err);
-    });
-  }
-  if (password) {
-    query = `UPDATE users SET password = '${req.body.password}' WHERE id = '${req.params.id}'`;
-    db.query(query, (err) => {
-      if (err) return res.status(500).json(err);
-    });
-  }
-  res.status(200).json({ message: "User updated" });
-});
 };
 
-const deleteUser = (req, res) => {
-  const query = `DELETE FROM users WHERE id=${req.params.id}`;
-  db.query(`SELECT * FROM users WHERE id=${req.params.id}`, (err, result) =>{
-    if (err) return res.status(500).json(err);
-    if (result.length === 0) return res.status(404).json('No user with this id');
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json(err);
-    return res.status(200).json({ message: "User deleted" });
-  });
-  });
+const addNewState = (req, res) => {
+    const { id, name } = req.body;
+
+    //check if id or name is empty
+    if (!(id && name)) return res.status(400).json("id, name required");
+
+    //check if id already placed
+    const queryIdEmpty = `SELECT * FROM state WHERE id=${id}`;
+    db.query(queryIdEmpty, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length !== 0) return res.status(406).json('id is occupied by another state');
+
+        //create new state
+        const query = `INSERT INTO state VALUES ( '${id}', '${name}')`;
+        db.query(query, (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.status(201).json("New state created");
+    });
+    });
 };
 
-module.exports = { getAllUsers, AddNewUser, getUser, updateUser, deleteUser };
+const updateState = (req, res) => {
+    const { name } = req.body;
+
+    //check if name is empty
+    if (!name) return res.status(400).json("New name for state is required");
+
+    //check if id exists
+    const queryIdExist = `SELECT * FROM state WHERE id=${req.params.id}`;
+    db.query(queryIdExist, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
+
+        //update name in state
+        const query = `UPDATE state SET name = '${name}' WHERE id=${req.params.id}`;
+        db.query(query, (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.status(200).json("State updated");
+    });
+    });
+};
+
+const deleteState = (req, res) => {
+    //check if id exists
+    const queryIdExist = `SELECT * FROM state WHERE id=${req.params.id}`;
+    db.query(queryIdExist, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`State №${req.params.id} doesn't exist`);
+
+        //delete state
+        const query = `DELETE FROM state WHERE id=${req.params.id}`;
+        db.query(query, (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.status(200).json("State deleted");
+    });
+    });
+};
+
+module.exports = { getAllState, getState, addNewState, updateState, deleteState };
 ```
+## Файл контролерів для обробки запитів таблиці result - controllerResult.js
 
+```js
+const db = require("../connection");
+const { use } = require("../routes");
 
+const getAllResults = (req, res) => {
+    const query = "SELECT * FROM results";
+    db.query(query,(err,result) => {
+        if (err) return res.status(500).json(err);
+        res.status(200).json(result);
+    });
+};
 
+const getResults = (req, res) => {
+    const query = `SELECT * FROM results WHERE id=${req.params.id}`;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`Result №${req.params.id} doesn't exist`);
+        res.status(200).json(result[0]);
+    });
+};
+
+const addNewResults = (req, res) => {
+    const { id, options_id, users_id } = req.body;
+
+    //check if id, options_id, users_id is empty
+    if (!(id && options_id && users_id)) return res.status(400).json("id, options_id, users_id required");
+
+    //check if id already placed
+    const queryIdEmpty = `SELECT * FROM results WHERE id=${id}`;
+    db.query(queryIdEmpty, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length !== 0) return res.status(406).json('id is occupied by another result');
+
+        //check if options_id exist
+        const queryOptions_idExist = `SELECT * FROM options WHERE id=${options_id}`;
+        db.query(queryOptions_idExist, (err, result) => {
+            if (err) return res.status(500).json(err);
+            if (result.length === 0) return res.status(406).json('options_id is not exist');
+
+            //check if users_id exist
+            const queryUsers_idExist = `SELECT * FROM options WHERE id=${users_id}`;
+            db.query(queryUsers_idExist, (err, result) => {
+                if (err) return res.status(500).json(err);
+                if (result.length === 0) return res.status(406).json('users_id is not exist');
+
+                //create new result
+                const query = `INSERT INTO results VALUES ( '${id}', '${options_id}', '${users_id}')`;
+                db.query(query, (err, result) => {
+                    if (err) return res.status(500).json(err);
+                    res.status(201).json("New result created");
+    });
+    });
+    });
+    });
+};
+
+const updateResults = (req, res) => {
+    const {options_id, users_id } = req.body;
+
+    //check if options_id or users_id empty
+    if(!(options_id && users_id)) return res.status(400).json("options_id, users_id are required");
+
+    //check if id exists
+    const queryIdExist = `SELECT * FROM results WHERE id=${req.params.id}`
+    db.query(queryIdExist, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`Result №${req.params.id} doesn't exist`);
+
+        //check if options_id exist
+        const queryOptions_idExist = `SELECT * FROM options WHERE id=${options_id}`;
+        db.query(queryOptions_idExist, (err, result) => {
+            if (err) return res.status(500).json(err);
+            if (result.length === 0) return res.status(406).json('options_id is not exist');
+
+            //check if users_id exist
+            const queryUsers_idExist = `SELECT * FROM options WHERE id=${users_id}`;
+            db.query(queryUsers_idExist, (err, result) => {
+                if (err) return res.status(500).json(err);
+                if (result.length === 0) return res.status(406).json('users_id is not exist');
+
+                //update options_id in results
+                const query = `UPDATE results SET options_id=${options_id}, users_id=${users_id} WHERE id=${req.params.id}`;
+                db.query(query, (err) => {
+                    if (err) return res.status(500).json(err);
+                    res.status(200).json("Results updated");
+    });
+    });
+    });
+    });
+};
+
+const deleteResults = (req, res) => {
+    //check if id exists
+    const queryIdExist = `SELECT * FROM results WHERE id=${req.params.id}`;
+    db.query(queryIdExist, (err, result) => {
+        if (err) return res.status(500).json(err);
+        if (result.length === 0) return res.status(404).json(`Result №${req.params.id} doesn't exist`);
+
+        //delete result
+        const query = `DELETE FROM results WHERE id=${req.params.id}`;
+        db.query(query, (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.status(200).json("Result deleted");
+    });
+    });
+};
+
+module.exports = { getAllResults, getResults, addNewResults, updateResults, deleteResults };
+```
